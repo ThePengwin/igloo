@@ -49,12 +49,12 @@ $app->post('/up', function () use ($app) {
 
 		$db = Database::get();
 
-		$new_file_sql = $db->prepare('INSERT INTO `i`.`files` (`id`,`mime`,`uploaded`,`filename`) VALUES (?,?,?,?)');
+		$new_file_sql = $db->prepare('INSERT INTO `files` (`id`,`mime`,`uploaded`,`filename`) VALUES (?,?,?,?)');
 		$new_file_sql->bind_param('ssss',$file,$_FILES['file']['type'],time(),$_FILES['file']['name']);
 
 		if (!$new_file_sql->execute()) $app->halt(500,'I Have failed you');
 
-		$app->halt(200,SERVER_DIR.$file);
+		$app->halt(200,$app->request->getScheme().'://'.SERVER_DIR.$file);
 
 	} else {
 		
