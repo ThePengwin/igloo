@@ -1,22 +1,38 @@
 <?php
 
-require 'vendor/autoload.php';
-require 'lib/Database.php';
-
-if (!file_exists('config.php')) die ('Not configured');
+if (!file_exists('config.php')) {
+	die ('Not configured');
+}
 
 require 'config.php';
+require 'vendor/autoload.php';
 
 $app = new \Slim\Slim();
+
+//set up database
+$app->container->singleton('db', function () {
+
+	$db = new mysqli(
+		APP_DB_HOST,
+		APP_DB_USER,
+		APP_DB_PASSWORD,
+		APP_DB_DATABASE
+	);
+
+	if ($db->connect_error) {
+		die ('Database connection failed');
+	}
+
+	return $db;
+
+});
 
 $app->get('/(:file)', function ($file=null) use ($app) {
 	
 	if (empty($file)) $app->notFound();
 	if (!file_exists(FILE_DIR.$file)) $app->notFound();
-
-	$db = Database::get();
 	
-	$get_file_sql = $db->prepare('SELECT `id`,`mime`,`uploaded`,`filename` FROM files WHERE id=?');
+	$get_file_sql = $app->db->prepare('SELECT `id`,`mime`,`uploaded`,`filename` FROM files WHERE id=?');
 	$get_file_sql->bind_param('s',$file);
 	$get_file_sql->execute();
 	$get_file_sql->bind_result($id, $mime, $uploaded, $filename);
@@ -47,9 +63,7 @@ $app->post('/up', function () use ($app) {
 
 	if (move_uploaded_file($_FILES['file']['tmp_name'],FILE_DIR.$file)) {
 
-		$db = Database::get();
-
-		$new_file_sql = $db->prepare('INSERT INTO `files` (`id`,`mime`,`uploaded`,`filename`) VALUES (?,?,?,?)');
+		$new_file_sql = $app->db->prepare('INSERT INTO `files` (`id`,`mime`,`uploaded`,`filename`) VALUES (?,?,?,?)');
 		$new_file_sql->bind_param('ssss',$file,$_FILES['file']['type'],time(),$_FILES['file']['name']);
 
 		if (!$new_file_sql->execute()) $app->halt(500,'I Have failed you');
